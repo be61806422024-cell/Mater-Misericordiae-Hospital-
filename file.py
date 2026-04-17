@@ -5,12 +5,32 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, date
 import io
+from PIL import Image
+import os
 
 # ------------------------------
 # Page config
 st.set_page_config(page_title="Mater Hospital - Audit Follow-Up Dashboard", layout="wide")
-st.title("🏥 Mater Misericordiae Hospital")
-st.subheader("Internal Audit Follow-Up Tracker")
+
+# ------------------------------
+# Load and display logo
+logo_path = "mater.png"  # Assuming the image is in the same directory
+if os.path.exists(logo_path):
+    logo = Image.open(logo_path)
+    # Display logo in sidebar
+    st.sidebar.image(logo, use_container_width=True)
+    # Also display at top of main area (optional)
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image(logo, width=100)
+    with col2:
+        st.title("🏥 Mater Misericordiae Hospital")
+        st.subheader("Internal Audit Follow-Up Tracker")
+else:
+    st.title("🏥 Mater Misericordiae Hospital")
+    st.subheader("Internal Audit Follow-Up Tracker")
+    st.sidebar.warning("Logo image 'mater.png' not found. Please place it in the app directory.")
+
 st.markdown("Monitor implementation status of audit recommendations across departments.")
 
 # ------------------------------
