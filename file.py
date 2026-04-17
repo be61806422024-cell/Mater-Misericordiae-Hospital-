@@ -3,10 +3,21 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from PIL import Image
+import os
 
 # ------------------------------
 # Page configuration
 st.set_page_config(page_title="Mater Hospital Audit Dashboard", layout="wide")
+
+# ------------------------------
+# Load and display logo
+logo_path = "materhosp.png"
+if os.path.exists(logo_path):
+    logo = Image.open(logo_path)
+    st.sidebar.image(logo, use_container_width=True)
+else:
+    st.sidebar.warning("Logo 'materhosp.png' not found. Please place it in the app directory.")
 
 # ------------------------------
 # Dashboard title and subtitle
@@ -35,14 +46,13 @@ data = {
 
 df = pd.DataFrame(data)
 
-# Calculate implementation percentage based ONLY on fully implemented (as per your table)
+# Calculate implementation percentage based ONLY on fully implemented
 df["IMPLEMENTATION_PERCENT"] = (df["FULLY_IMPLEMENTED"] / df["RECOMMENDED_ISSUES"]) * 100
 df["IMPLEMENTATION_PERCENT"] = df["IMPLEMENTATION_PERCENT"].round(1).fillna(0)
 
-# Outstanding issues = Total - Fully Implemented
 df["OUTSTANDING_ISSUES"] = df["RECOMMENDED_ISSUES"] - df["FULLY_IMPLEMENTED"]
 
-# Identify departments with NO follow-up done (fully=0, partially=0, not_impl=0)
+# Identify departments with NO follow-up done
 df["FOLLOW_UP_DONE"] = (df["FULLY_IMPLEMENTED"] + df["PARTIALLY_IMPLEMENTED"] + df["NOT_IMPLEMENTED"]) > 0
 no_followup_depts = df[~df["FOLLOW_UP_DONE"]]["DEPARTMENT"].tolist()
 
@@ -65,7 +75,6 @@ filtered_df = df[
     (df["YEAR_OF_ISSUE"].isin(selected_years))
 ]
 
-# For risk visuals
 risk_filtered_df = filtered_df.copy()
 if "High" not in selected_risks:
     risk_filtered_df["HIGH"] = 0
@@ -87,8 +96,6 @@ not_imp = filtered_df["NOT_IMPLEMENTED"].sum()
 fully_pct = (fully_imp / total_issues * 100) if total_issues > 0 else 0
 partially_pct = (partially_imp / total_issues * 100) if total_issues > 0 else 0
 not_imp_pct = (not_imp / total_issues * 100) if total_issues > 0 else 0
-
-# Overall implementation rate based on FULLY implemented only (consistent with your table)
 overall_impl = (fully_imp / total_issues * 100) if total_issues > 0 else 0
 
 with col1:
@@ -113,7 +120,7 @@ else:
 st.markdown("---")
 
 # ------------------------------
-# 2. Risk Analysis
+# Risk Analysis
 st.header("⚠️ Risk Analysis")
 col_risk1, col_risk2 = st.columns(2)
 
@@ -148,7 +155,7 @@ with col_risk2:
 st.markdown("---")
 
 # ------------------------------
-# 3. Implementation Status
+# Implementation Status
 st.header("📋 Implementation Status")
 col_impl1, col_impl2 = st.columns(2)
 
@@ -211,9 +218,8 @@ with col_impl2:
 st.markdown("---")
 
 # ------------------------------
-# 4. Department Performance
+# Department Performance
 st.header("🏆 Department Performance")
-
 perf_df = filtered_df[["DEPARTMENT", "RECOMMENDED_ISSUES", "IMPLEMENTATION_PERCENT"]].copy()
 perf_df = perf_df.sort_values("IMPLEMENTATION_PERCENT", ascending=False).reset_index(drop=True)
 
@@ -248,7 +254,7 @@ st.dataframe(
 st.markdown("---")
 
 # ------------------------------
-# 5. Outstanding Issues / Gap Analysis
+# Outstanding Issues
 st.header("📌 Outstanding Issues (Gap Analysis)")
 outstanding_total = filtered_df["OUTSTANDING_ISSUES"].sum()
 st.metric("Total Outstanding Issues (Not Fully Implemented)", f"{outstanding_total}")
@@ -269,7 +275,7 @@ if not outstanding_by_dept.empty:
 st.markdown("---")
 
 # ------------------------------
-# 6. Year-Based Analysis
+# Year-Based Analysis
 st.header("📅 Year-on-Year Comparison")
 year_agg = filtered_df.groupby("YEAR_OF_ISSUE").agg({
     "RECOMMENDED_ISSUES": "sum",
@@ -304,7 +310,7 @@ st.plotly_chart(fig_year_impl, use_container_width=True)
 st.markdown("---")
 
 # ------------------------------
-# 7. High-Risk Focus
+# High-Risk Focus
 st.header("🔥 High-Risk Focus")
 high_risk_depts = filtered_df[filtered_df["HIGH"] > 0].copy()
 if not high_risk_depts.empty:
@@ -332,17 +338,15 @@ else:
 st.markdown("---")
 
 # ------------------------------
-# 8. Visual Alerts / Flags
+# Visual Alerts
 st.header("🚨 Visual Alerts & Flags")
 
-# Alert 1: Departments with 0% implementation
 zero_impl_depts = filtered_df[filtered_df["IMPLEMENTATION_PERCENT"] == 0]["DEPARTMENT"].tolist()
 if zero_impl_depts:
     st.warning(f"⚠️ **0% Implementation Alert** - The following departments have no fully implemented issues: {', '.join(zero_impl_depts)}")
 else:
     st.success("✅ No departments with 0% implementation.")
 
-# Alert 2: Departments with high-risk issues (>5) and low implementation (<30%)
 high_risk_low_impl = filtered_df[
     (filtered_df["HIGH"] > 5) & (filtered_df["IMPLEMENTATION_PERCENT"] < 30)
 ]
@@ -353,7 +357,6 @@ if not high_risk_low_impl.empty:
 else:
     st.info("No critical high-risk low-implementation departments.")
 
-# Alert 3: Older (2024) unresolved issues (not fully implemented)
 old_issues = filtered_df[(filtered_df["YEAR_OF_ISSUE"] == 2024) & (filtered_df["FULLY_IMPLEMENTED"] < filtered_df["RECOMMENDED_ISSUES"])]
 if not old_issues.empty:
     st.warning("📅 **Aging Issues** - 2024 issues still not fully resolved:")
@@ -365,7 +368,7 @@ else:
 st.markdown("---")
 
 # ------------------------------
-# 9. Data Export
+# Data Export
 st.subheader("📎 Data Export")
 csv = filtered_df.to_csv(index=False).encode("utf-8")
 st.download_button("Download Filtered Data as CSV", csv, "audit_dashboard_data.csv", "text/csv")
